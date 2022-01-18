@@ -71,14 +71,14 @@ class TrafficLightExt():
     def set_current_light_color(self, frame):
         masked_light = self.get_masked(frame)
 
-        if np.sum(np.mean(masked_light, axis=(0, 1))) == 0:
+        if np.sum(np.mean(masked_light, axis=(0, 1))) < 20:
             self.light.soft_change_state(TrafficColor.GREEN)
         else:
             self.light.soft_change_state(TrafficColor.RED)
 
 class Indicator:
     def __init__(self, topLeftCoords, bottomRightCoords):
-        self.TrafficLight = TrafficLightExt()
+        self.trafficLight = TrafficLightExt()
 
         self.camera = self.get_camera()
         self.crossing = 0
@@ -99,30 +99,38 @@ class Indicator:
         topLeftX, topLeftY = self.topLeftCoords
         botRightX, botRightY = self.bottomRightCoords
 
-        self.TrafficLight.light.set_current_light_color(
+        self.trafficLight.set_current_light_color(
             frame[topLeftY:botRightY, 
                   topLeftX:botRightX]
         )
 
         currTime = time.time()
 
-        if (self.traffic_light.light.currState == TrafficColor.GREEN) \
-            and (currTime - self.traffic_light.light.lastChangeTime < self.crossingTime):
-            self.crossing = max(0, self.crossingTime - int(currTime - self.traffic_light.light.lastChangeTime))
+        if (self.trafficLight.light.currState == TrafficColor.GREEN):
+            self.crossing = max(0, self.crossingTime - int(currTime - self.trafficLight.light.lastChangeTime))
+        frame = cv2.rectangle(frame, self.topLeftCoords, self.bottomRightCoords, color=(255,0,0), thickness=2)        
         return frame
 
 if __name__ == "__main__":
     crossingIndicator = Indicator(
-        (0, 0), (200, 200)
+        (200, 200), (300, 300)
     )
 
     while(True):
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        key = cv2.waitKey(1)
+        if key & 0xFF == ord('q'):
             break
-
+        if key & 0xFF == ord('r'):
+            tlc = (int(input('Enter top left x')), int(input('Enter top left y')))
+            brc = (int(input('Enter bottom right x')), int(input('Enter bottom right y')))
+            if tlc[0] < brc[0] and tlc[1] < brc[1]:
+                crossingIndicator.topLeftCoords = tlc
+                crossingIndicator.bottomRightCoords = brc
+            else:
+                print('INVALID RECTANGLE!!!!!!!!!!!!!!!!!!!!!!!!!!!')
         frame = crossingIndicator.get_crossing_state()
         cv2.imshow('frame', frame)
-        print(crossingIndicator.crossingTime)
+        print(crossingIndicator.crossing)
 
 # light = TrafficLight(initialState=TrafficColor.RED, changeBuffer=2)
 # light.soft_change_state(TrafficColor.GREEN)
